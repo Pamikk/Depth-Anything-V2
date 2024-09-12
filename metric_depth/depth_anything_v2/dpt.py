@@ -182,17 +182,17 @@ class DepthAnythingV2(nn.Module):
         
         depth = self.depth_head(features, patch_h, patch_w) * self.max_depth
         
-        return depth.squeeze(1)
+        return depth.squeeze(1),features
     
     @torch.no_grad()
     def infer_image(self, raw_image, input_size=518):
         image, (h, w) = self.image2tensor(raw_image, input_size)
         
-        depth = self.forward(image)
+        depth,feats = self.forward(image)
         
         depth = F.interpolate(depth[:, None], (h, w), mode="bilinear", align_corners=True)[0, 0]
         
-        return depth.cpu().numpy()
+        return depth.cpu().numpy(),feats
     
     def image2tensor(self, raw_image, input_size=518):        
         transform = Compose([
