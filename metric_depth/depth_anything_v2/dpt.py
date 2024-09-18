@@ -180,7 +180,6 @@ class DepthAnythingV2(nn.Module):
         
         
         features = self.pretrained.get_intermediate_layers(x, self.intermediate_layer_idx[self.encoder], return_class_token=True)
-        print(patch_h,patch_w,x.shape,features[0][0].shape)
         
         depth = self.depth_head(features, patch_h, patch_w) * self.max_depth
         shape_info={'patch_size':(patch_h,patch_w),'origin_size':x.shape[-2:]}
@@ -192,10 +191,14 @@ class DepthAnythingV2(nn.Module):
         
         depth,feats,shape_info = self.forward(image)
         
-        depth = F.interpolate(depth[:, None], (h, w), mode="bilinear", align_corners=True)[0, 0]
+        #depth = F.interpolate(depth[:, None], (h, w), mode="bilinear", align_corners=True)[0, 0]
         
-        return depth.cpu().numpy(),feats,shape_info
-    
+        return depth.squeeze().cpu().numpy(),feats,shape_info
+    @torch.no_grad()
+    def extract_feats(self, raw_image, input_size=518):
+        image, (h, w) = self.image2tensor(raw_image, input_size)        
+        features = self.pretrained.get_intermediate_layers(image,self.intermediate_layer_idx[self.encoder])[-1].squeeze()
+        return features,image.shape[-2:]
     def image2tensor(self, raw_image, input_size=518):        
         transform = Compose([
             Resize(
