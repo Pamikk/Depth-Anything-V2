@@ -195,11 +195,16 @@ class DepthAnythingV2(nn.Module):
         
         return depth.squeeze().cpu().numpy(),feats,shape_info
     @torch.no_grad()
-    def extract_feats(self, raw_image, input_size=518):
-        image, (h, w) = self.image2tensor(raw_image, input_size)        
-        features = self.pretrained.get_intermediate_layers(image,self.intermediate_layer_idx[self.encoder])[-1].squeeze()
-        return features,image.shape[-2:]
-    def image2tensor(self, raw_image, input_size=518):        
+    def get_depth_and_feats(self,imgs,input_size=518):
+        images = []
+        for img in imgs:
+            image, (h, w) = self.image2tensor(img, input_size,img_encode=True)
+            images.append(image)
+        images = torch.concat(images,dim=0)
+        depth,feats,_ = self.forward(image)
+        return depth,feats
+
+    def image2tensor(self, raw_image, input_size=518,img_encode=False):        
         transform = Compose([
             Resize(
                 width=input_size,
@@ -216,7 +221,7 @@ class DepthAnythingV2(nn.Module):
         
         h, w = raw_image.shape[:2]
         
-        image = cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB) / 255.0
+        image = cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB) / 255.0 if img_encode else raw_image
         
         image = transform({'image': image})['image']
         image = torch.from_numpy(image).unsqueeze(0)
